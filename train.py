@@ -9,7 +9,6 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import seaborn as sns
 from math import *
-from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import MinMaxScaler
 
 from keras.models import Sequential
