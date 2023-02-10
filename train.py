@@ -1,13 +1,10 @@
-import os
-import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+import pandas as pd
+import pandas.io.sql as psql
+import datetime
 import argparse
 import pickle
 import yfinance as yf
-
-import matplotlib.pyplot as plt
-import seaborn as sns
 from math import *
 from sklearn.preprocessing import MinMaxScaler
 
@@ -18,37 +15,30 @@ from keras.losses import MeanSquaredError
 from keras.metrics import RootMeanSquaredError
 from keras.optimizers import Adam
 
+from db.postgres import *
+
 lookback = 60
-start_date = '2015-01-01'
-end_date = '2023-02-01'
 
 
-def preprocess(symbol, start, end, lookback):
+def preprocess(symbol, lookback):
 
-    try:
-        data = yf.download(symbol, start=start, end=end, progress=False)
-        data['date'] = pd.to_datetime(data.index)
-        df = data[['date', 'Close']]
+    df = psql.read_sql(f"select date, close from stock_raw where stock = '{symbol}'", conn=connect())
 
-        scaler = MinMaxScaler(feature_range=(0,1))
-        dataset = df.filter(['Close']).values
-        dataset = scaler.fit_transform(dataset)
+    scaler = MinMaxScaler(feature_range=(0,1))
+    dataset = df.filter(['Close']).values
+    dataset = scaler.fit_transform(dataset)
 
-        dataX, dataY = [], []
-        for i in range(len(dataset) - lookback):
-            row = [a for a in dataset[i:i+lookback]]
-            dataX.append(row)
-            dataY.append(dataset[i + lookback][0])
-        X, y = np.array(dataX), np.array(dataY)
+    dataX, dataY = [], []
+    for i in range(len(dataset) - lookback):
+        row = [a for a in dataset[i:i+lookback]]
+        dataX.append(row)
+        dataY.append(dataset[i + lookback][0])
+    X, y = np.array(dataX), np.array(dataY)
 
-        # Train-test split
-        split_point = int(len(dataset)*0.9)
-        X_train, y_train = X[:split_point], y[:split_point]
-        X_val, y_val = X[split_point:len(X)], y[split_point:len(y)]
-
-    
-    except Exception as e:
-        print('ERROR: Loading data failed - ', e)
+    # Train-test split
+    split_point = int(len(dataset)*0.9)
+    X_train, y_train = X[:split_point], y[:split_point]
+    X_val, y_val = X[split_point:len(X)], y[split_point:len(y)]
 
     return scaler, X_train, y_train, X_val, y_val
 
@@ -59,7 +49,7 @@ def train(symbol, **kwargs):
     '''
     '''
 
-    scaler, X_train, y_train, X_val, y_val = preprocess(symbol, start=start_date, end=end_date, lookback=60)
+    scaler, X_train, y_train, X_val, y_val = preprocess(symbol, lookback=60)
 
     ## Modeling
     model = Sequential()
