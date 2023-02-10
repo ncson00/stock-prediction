@@ -49,7 +49,7 @@ def write_postgres(conn, df, table_name):
     cursor.close()
 
 
-def postgres_oprerator(sql, conn):
+def postgres_operator(sql, conn):
     # run_date = date(*map(int, run_date.split('-')))    
     try:        
         cur = conn.cursor()        

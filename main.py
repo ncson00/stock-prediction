@@ -39,12 +39,10 @@ def update_rmse(symbol, run_date):
 
     rmse = sqrt(mean_squared_error(true_price, predict_price))
 
-    postgres_oprerator(
+    postgres_operator(
         sql=f"""
             delete from rmse where date = '{run_date}';
             insert into rmse values ({run_date}, {symbol}, {rmse});
         """,
         conn=connect()
     )
-
-
