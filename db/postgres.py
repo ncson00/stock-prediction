@@ -47,3 +47,17 @@ def write_postgres(conn, df, table_name):
         return 1
     print("execute_values() done")
     cursor.close()
+
+
+def postgres_oprerator(sql, conn):
+    # run_date = date(*map(int, run_date.split('-')))    
+    try:        
+        cur = conn.cursor()        
+        cur.execute(sql)        
+        conn.commit()        
+        cur.close()    
+    except (Exception, psycopg2.DatabaseError) as e:        
+        print(e)    
+    finally:        
+        if conn is not None:            
+            conn.close()    
