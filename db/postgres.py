@@ -4,7 +4,7 @@ import psycopg2.extras as extras
 PG_USER = "postgres"
 PG_PASSWORD = "1"
 PG_DATABASE = "stock"
-PG_HOST = "172.18.0.3"
+PG_HOST = "172.18.0.2"
 PG_PORT = 5432
 PG_DRIVER = 'org.postgresql.Driver'
 
@@ -49,11 +49,11 @@ def write_postgres(conn, df, table_name):
     cursor.close()
 
 
-def postgres_operator(sql, conn):
+def postgres_operator(query, conn):
     # run_date = date(*map(int, run_date.split('-')))    
     try:        
         cur = conn.cursor()        
-        cur.execute(sql)        
+        cur.execute(query)        
         conn.commit()        
         cur.close()    
     except (Exception, psycopg2.DatabaseError) as e:        

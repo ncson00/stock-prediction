@@ -4,7 +4,6 @@ import pandas.io.sql as psql
 import datetime
 import argparse
 import pickle
-import yfinance as yf
 from math import *
 from sklearn.preprocessing import MinMaxScaler
 
@@ -17,41 +16,58 @@ from keras.optimizers import Adam
 
 from db.postgres import *
 
-lookback = 60
 
-
-def preprocess(symbol, lookback):
-
-    df = psql.read_sql(f"select date, close from stock_raw where stock = '{symbol}'", conn=connect())
-
-    scaler = MinMaxScaler(feature_range=(0,1))
-    dataset = df.filter(['Close']).values
-    dataset = scaler.fit_transform(dataset)
-
-    dataX, dataY = [], []
-    for i in range(len(dataset) - lookback):
-        row = [a for a in dataset[i:i+lookback]]
-        dataX.append(row)
-        dataY.append(dataset[i + lookback][0])
-    X, y = np.array(dataX), np.array(dataY)
-
-    # Train-test split
-    split_point = int(len(dataset)*0.9)
-    X_train, y_train = X[:split_point], y[:split_point]
-    X_val, y_val = X[split_point:len(X)], y[split_point:len(y)]
-
-    return scaler, X_train, y_train, X_val, y_val
-
-
-
-def train(symbol, **kwargs):
+class DataHandler:
 
     '''
     '''
 
-    scaler, X_train, y_train, X_val, y_val = preprocess(symbol, lookback=60)
+    def __init__(self, symbol, lookback = 60):
+        self.symbol = symbol
+        self.lookback = lookback
 
-    ## Modeling
+
+    def get_scaler(self):
+        df = psql.read_sql(f"select date, close from stock_raw where stock = '{self.symbol}'", connect())
+        dataset = df[['close']].values
+
+        scaler = MinMaxScaler(feature_range=(0,1))
+        dataset = scaler.fit_transform(dataset)
+
+        self.dataset = dataset
+
+        return scaler
+
+
+    def model_input(self):
+
+        self.get_scaler()
+
+        dataX, dataY = [], []
+        for i in range(len(self.dataset) - self.lookback):
+            row = [a for a in self.dataset[i:i+self.lookback]]
+            dataX.append(row)
+            dataY.append(self.dataset[i + self.lookback][0])
+
+        X, y = np.array(dataX), np.array(dataY)
+
+        # Train-test split
+        split_point = int(len(self.dataset)*0.9)
+        X_train, y_train = X[:split_point], y[:split_point]
+        X_val, y_val = X[split_point:len(X)], y[split_point:len(y)]
+
+        return X_train, y_train, X_val, y_val
+
+
+def baseline_model(symbol):
+
+    '''
+    '''
+    model = DataHandler(symbol=symbol, lookback=60)
+
+    X_train, y_train, X_val, y_val = model.model_input()
+
+    ### Modeling
     model = Sequential()
     model.add(LSTM(128, return_sequences=True, input_shape=(X_train.shape[1], 1)))
     model.add(LSTM(64, return_sequences=False))
@@ -69,7 +85,6 @@ def train(symbol, **kwargs):
     pickle.dump(model, open(f'model/LTSM_{symbol}.sav', 'wb'))
 
 
-
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
@@ -81,4 +96,4 @@ if __name__ == '__main__':
     if not args.symbol:
         raise IOError("Stock symbol must be specify from arguments!!!")
 
-    train(args.symbol)
+    baseline_model(args.symbol)
