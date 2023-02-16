@@ -6,7 +6,7 @@ from db.postgres import *
 
 TICKETS = ['AAPL', 'MSFT', 'GOOG', 'AMZN', 'TSLA']
 START_DATE = '2015-01-01'
-END_DATE = datetime.now().strftime("%Y-%m-%d")
+END_DATE = datetime.datetime.now().strftime("%Y-%m-%d")
 
 
 def load_data():
@@ -28,7 +28,7 @@ def load_data():
 
             df['stock'] = ticket
 
-            temp = pd.append([temp, df])
+            temp = pd.concat([temp, df])
 
         except Exception as e:
             print("ERROR: Loading data failed!!! - {} - {}".format(ticket, e))

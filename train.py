@@ -15,6 +15,7 @@ from keras.metrics import RootMeanSquaredError
 from keras.optimizers import Adam
 
 from db.postgres import *
+from load_data import TICKETS
 
 
 class DataHandler:
@@ -79,7 +80,7 @@ def baseline_model(ticket):
 
     # Compile the model
     model.compile(loss=MeanSquaredError(), optimizer=Adam(learning_rate=0.0001), metrics=[RootMeanSquaredError()])
-    history = model.fit(X_train, y_train, epochs=10, validation_data=(X_val, y_val), callbacks=[cp])
+    history = model.fit(X_train, y_train, epochs=20, validation_data=(X_val, y_val), callbacks=[cp])
 
     # Save
     pickle.dump(model, open(f'model/LTSM_{ticket}.sav', 'wb'))
@@ -89,11 +90,13 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     # Adding argument
-    parser.add_argument("-s", "--ticket", help="")
+    parser.add_argument("-t", "--ticket", help="")
 
     # Read arguments from command line
     args = parser.parse_args()
     if not args.ticket:
-        raise IOError("Stock ticket must be specify from arguments!!!")
-
-    baseline_model(args.ticket)
+        for ticket in TICKETS:
+            baseline_model(ticket)
+        raise IOError("Training all Stock!!!")
+    else:
+        baseline_model(args.ticket)
