@@ -24,54 +24,65 @@ start_date = '2015-01-01'
 end_date = '2023-02-01'
 
 
-def load_model(symbol):
-    return pickle.load(open(f'model/LTSM_{symbol}.sav', 'rb'))
-
-
-def update_rmse(symbol, run_date):
+class ModelOutput(DataHandler):
 
     '''
     '''
-    model = DataHandler(symbol=symbol, lookback=60)
-
-    X_train, y_train, X_val, y_val = model.preprocess()
-
-    ltsm = load_model(symbol)
-    y_predict = ltsm.predict(X_val)
-
-    scaler = model.get_scaler()
-    predict_price = scaler.inverse_transform(y_predict.reshape(-1, 1))
-    true_price = scaler.inverse_transform(y_val.reshape(-1, 1))
-
-    rmse = sqrt(mean_squared_error(true_price, predict_price))
-
-    postgres_operator(
-        query=f"""
-            delete from rmse where date = '{run_date}';
-            insert into rmse values ({run_date}, {symbol}, {rmse});
-        """,
-        conn=connect()
-    )
+    def __init__(self, run_date, ticket, lookback):
+        super().__init__(ticket, lookback)
+        self.run_date = run_date
 
 
-def recursive_forecasting(symbol, run_date, steps):
+    def load_model(self):
+        return pickle.load(open(f'model/LTSM_{self.ticket}.sav', 'rb'))
 
-    '''
-    '''
-    # Load input
-    data = psql.read_sql(f"""
-        select date, close 
-        from stock_raw 
-        where stock = '{symbol}'
-            and date between '{run_date - timedelta(days=90)}' and '{run_date}'
-    """, connect())
 
-    model = DataHandler()
-    scaler = model.get_scaler()
-    input = scaler.transform(data[['close']].values)
+    def update_rmse(self):
 
-    ltsm = load_model(symbol)
+        model = DataHandler(ticket=self.ticket, lookback=60)
 
-    for step in steps:
-        temp = ltsm.predict(input)
-        input = np.append(input, temp[-1])
+        X_train, y_train, X_val, y_val = model.preprocess()
+
+        ltsm = self.load_model()
+        y_predict = ltsm.predict(X_val)
+
+        scaler = model.get_scaler()
+        predict_price = scaler.inverse_transform(y_predict.reshape(-1, 1))
+        true_price = scaler.inverse_transform(y_val.reshape(-1, 1))
+
+        rmse = sqrt(mean_squared_error(true_price, predict_price))
+
+        return rmse
+
+
+    def recursive_forecasting(ticket, run_date, steps):
+
+        '''
+        '''
+        # Load input
+        data = psql.read_sql(f"""
+            select close 
+            from stock_raw 
+            where stock = '{ticket}'
+                and date between '{run_date - timedelta(days=90)}' and '{run_date}'
+        """, connect())
+
+        model = DataHandler()
+        scaler = model.get_scaler()
+        input = scaler.transform(data[['close']].values)
+
+        ltsm = load_model(ticket)
+
+        for steps in [1, 3, 5]:
+            for step in range(steps):
+                temp = ltsm.predict(input)
+                input = np.append(input, temp[-1])
+
+            result = scaler.inverse_transform(input.reshape(-1, 1))[-1]
+
+
+        postgres_operator(
+            query=f"""
+                
+            """
+        )

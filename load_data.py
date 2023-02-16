@@ -3,7 +3,7 @@ import yfinance as yf
 
 from db.postgres import *
 
-SYMBOLS = ['AAPL']
+TICKETS = ['AAPL']
 START_DATE = '2015-01-01'
 END_DATE = '2023-02-01'
 
@@ -14,7 +14,7 @@ def load_data():
     '''
     temp = pd.DataFrame()
 
-    for s in SYMBOLS:
+    for s in TICKETS:
         try:
             data = yf.download(s, start=START_DATE, end=END_DATE, progress=False)
             data['date'] = pd.to_datetime(data.index)

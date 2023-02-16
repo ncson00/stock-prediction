@@ -22,13 +22,13 @@ class DataHandler:
     '''
     '''
 
-    def __init__(self, symbol, lookback = 60):
-        self.symbol = symbol
+    def __init__(self, ticket, lookback = 60):
+        self.ticket = ticket
         self.lookback = lookback
 
 
     def get_scaler(self):
-        df = psql.read_sql(f"select date, close from stock_raw where stock = '{self.symbol}'", connect())
+        df = psql.read_sql(f"select date, close from stock_raw where stock = '{self.ticket}'", connect())
         dataset = df[['close']].values
 
         scaler = MinMaxScaler(feature_range=(0,1))
@@ -59,11 +59,11 @@ class DataHandler:
         return X_train, y_train, X_val, y_val
 
 
-def baseline_model(symbol):
+def baseline_model(ticket):
 
     '''
     '''
-    model = DataHandler(symbol=symbol, lookback=60)
+    model = DataHandler(ticket=ticket, lookback=60)
 
     X_train, y_train, X_val, y_val = model.model_input()
 
@@ -75,25 +75,25 @@ def baseline_model(symbol):
     model.add(Dense(1))
 
     # Checkpoint
-    cp = ModelCheckpoint(f'checkpoint/{symbol}/', save_best_only=True)
+    cp = ModelCheckpoint(f'checkpoint/{ticket}/', save_best_only=True)
 
     # Compile the model
     model.compile(loss=MeanSquaredError(), optimizer=Adam(learning_rate=0.0001), metrics=[RootMeanSquaredError()])
     history = model.fit(X_train, y_train, epochs=10, validation_data=(X_val, y_val), callbacks=[cp])
 
     # Save
-    pickle.dump(model, open(f'model/LTSM_{symbol}.sav', 'wb'))
+    pickle.dump(model, open(f'model/LTSM_{ticket}.sav', 'wb'))
 
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     # Adding argument
-    parser.add_argument("-s", "--symbol", help="")
+    parser.add_argument("-s", "--ticket", help="")
 
     # Read arguments from command line
     args = parser.parse_args()
-    if not args.symbol:
-        raise IOError("Stock symbol must be specify from arguments!!!")
+    if not args.ticket:
+        raise IOError("Stock ticket must be specify from arguments!!!")
 
-    baseline_model(args.symbol)
+    baseline_model(args.ticket)
