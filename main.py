@@ -13,16 +13,6 @@ from sklearn.metrics import mean_squared_error
 from train import DataHandler
 from db.postgres import *
 
-PG_USER = "postgres"
-PG_PASSWORD = "1"
-PG_DATABASE = "stock"
-PG_HOST = "172.18.0.3"
-PG_PORT = 5432
-PG_DRIVER = 'org.postgresql.Driver'
-
-start_date = '2015-01-01'
-end_date = '2023-02-01'
-
 
 class ModelOutput(DataHandler):
 
@@ -38,6 +28,9 @@ class ModelOutput(DataHandler):
 
 
     def load_rmse(self):
+
+        '''Calculating Model's RMSE
+        '''
 
         data_handler = DataHandler(ticket=self.ticket, lookback=60)
 
@@ -111,8 +104,8 @@ if __name__ == '__main__':
     # Read arguments from command line
     args = parser.parse_args()
     if not args.run_date:
-        raise IOError("Stock ticket must be specify from arguments!!!")
+        raise IOError("Run date must be specify from arguments!!!")
     if not args.ticket:
-        raise IOError("Stock ticket must be specify from arguments!!!")
+        raise IOError("Ticket must be specify from arguments!!!")
 
     main(args.run_date, args.ticket)
