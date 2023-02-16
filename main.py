@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import pandas.io.sql as psql
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import argparse
 import psycopg2
 import psycopg2.extras as extras
@@ -34,7 +34,7 @@ class ModelOutput(DataHandler):
 
         data_handler = DataHandler(ticket=self.ticket, lookback=60)
 
-        X_train, y_train, X_val, y_val = data_handler.preprocess()
+        X_train, y_train, X_val, y_val = data_handler.model_input()
 
         model = self.load_model()
         y_predict = model.predict(X_val)
@@ -44,6 +44,7 @@ class ModelOutput(DataHandler):
         true_price = scaler.inverse_transform(y_val.reshape(-1, 1))
 
         rmse = sqrt(mean_squared_error(true_price, predict_price))
+        print("RMSE: {}".format(rmse))
         return rmse
 
 
@@ -59,21 +60,25 @@ class ModelOutput(DataHandler):
                 and date between '{self.run_date - timedelta(days=90)}' and '{self.run_date}'
         """, connect())
 
-        data_handler = DataHandler()
+        true_price = data['close'].values[-1]
+
+        data_handler = DataHandler(ticket=self.ticket, lookback=60)
         scaler = data_handler.get_scaler()
-        input = scaler.transform(data[['close']].values)
-        true_price = data['close'][-1]
+        scaled_data = scaler.transform(data[['close']].values)
+
+        # Reshape scaled data
+        reshaped_data = np.reshape(scaled_data, len(scaled_data))
+        input = data_handler.transform_array(reshaped_data)
+
 
         model = self.load_model()
 
-        output = []
-        for steps in [1, 3, 5]:
-            for step in range(steps):
-                temp = model.predict(input)
-                input = np.append(input, temp[-1])
+        for step in range(5):
+            temp = model.predict(input)
+            input = np.append(input, temp[-1])
 
-            result = scaler.inverse_transform(input.reshape(-1, 1))
-            output = np.append(output, result[-1])
+        result = scaler.inverse_transform(input.reshape(-1, 1))
+        output = np.reshape(result, len(result))
 
         return output, true_price
     
@@ -84,14 +89,17 @@ def main(run_date, ticket):
     '''
     model_output = ModelOutput(run_date=run_date, ticket=ticket, lookback=60)
     rmse = model_output.load_rmse()
+    print(rmse)
     output, true_price = model_output.recursive_forecasting()
+    print(output)
+    print(true_price)
 
-    postgres_operator(
-        query=f"""
-            delete from predict_result where date = '{run_date}';
-            insert into predict_result values ({run_date}, {ticket}, {true_price}, {output[0]}, {output[1]}, {output[2]}, {rmse});
-        """, conn=connect()
-    )
+    # postgres_operator(
+    #     query=f"""
+    #         delete from predict_result where date = '{run_date}';
+    #         insert into predict_result values ({run_date}, {ticket}, {true_price}, {output[0]}, {output[1]}, {output[2]}, {rmse});
+    #     """, conn=connect()
+    # )
 
 
 if __name__ == '__main__':
@@ -104,7 +112,7 @@ if __name__ == '__main__':
     # Read arguments from command line
     args = parser.parse_args()
     if not args.run_date:
-        raise IOError("Run date must be specify from arguments!!!")
+        args.run_date = date.today()
     if not args.ticket:
         raise IOError("Ticket must be specify from arguments!!!")
 

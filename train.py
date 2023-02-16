@@ -58,6 +58,17 @@ class DataHandler:
         X_val, y_val = X[split_point:len(X)], y[split_point:len(y)]
 
         return X_train, y_train, X_val, y_val
+    
+
+    def transform_array(self, data):
+         
+        '''Transforming array into Model input'''
+        temp = []
+        for i in range(len(data) - self.lookback + 1):
+            row = [[a] for a in data[i:i+self.lookback]]
+            temp.append(row)
+            
+        return np.array(temp)
 
 
 def baseline_model(ticket):
@@ -95,8 +106,8 @@ if __name__ == '__main__':
     # Read arguments from command line
     args = parser.parse_args()
     if not args.ticket:
+        print("Training all Stock!!!")
         for ticket in TICKETS:
             baseline_model(ticket)
-        raise IOError("Training all Stock!!!")
     else:
         baseline_model(args.ticket)
