@@ -90,7 +90,7 @@ def baseline_model(ticket):
     cp = ModelCheckpoint(f'checkpoint/{ticket}/', save_best_only=True)
 
     # Compile the model
-    model.compile(loss=MeanSquaredError(), optimizer=Adam(learning_rate=0.0001), metrics=[RootMeanSquaredError()])
+    model.compile(loss=MeanSquaredError(), optimizer=Adam(learning_rate=0.0001), metrics=[RootMeanSquaredError()], run_eagerly=True)
     history = model.fit(X_train, y_train, epochs=20, validation_data=(X_val, y_val), callbacks=[cp])
 
     # Save
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     # Read arguments from command line
     args = parser.parse_args()
     if not args.ticket:
-        print("Training all Stock!!!")
+        print("Training all!!!")
         for ticket in TICKETS:
             baseline_model(ticket)
     else:

@@ -57,7 +57,7 @@ class ModelOutput(DataHandler):
             select close 
             from stock_raw 
             where stock = '{self.ticket}'
-                and date between '{self.run_date - timedelta(days=90)}' and '{self.run_date}'
+                and date between '{self.run_date - timedelta(days=150)}' and '{self.run_date}'
         """, connect())
 
         true_price = data['close'].values[-1]
@@ -67,14 +67,13 @@ class ModelOutput(DataHandler):
         scaled_data = scaler.transform(data[['close']].values)
 
         # Reshape scaled data
-        reshaped_data = np.reshape(scaled_data, len(scaled_data))
-        input = data_handler.transform_array(reshaped_data)
+        input = np.reshape(scaled_data, len(scaled_data))
 
 
         model = self.load_model()
 
         for step in range(5):
-            temp = model.predict(input)
+            temp = model.predict(data_handler.transform_array(input))
             input = np.append(input, temp[-1])
 
         result = scaler.inverse_transform(input.reshape(-1, 1))
@@ -94,12 +93,12 @@ def main(run_date, ticket):
     print(output)
     print(true_price)
 
-    # postgres_operator(
-    #     query=f"""
-    #         delete from predict_result where date = '{run_date}';
-    #         insert into predict_result values ({run_date}, {ticket}, {true_price}, {output[0]}, {output[1]}, {output[2]}, {rmse});
-    #     """, conn=connect()
-    # )
+    postgres_operator(
+        query=f"""
+            delete from predict_result where date = '{run_date}';
+            insert into predict_result values ('{run_date}', '{ticket}', {true_price}, {output[-5]}, {output[-3]}, {output[-1]}, {rmse});
+        """, conn=connect()
+    )
 
 
 if __name__ == '__main__':
