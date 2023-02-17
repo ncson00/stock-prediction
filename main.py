@@ -88,14 +88,12 @@ def main(run_date, ticket):
     '''
     model_output = ModelOutput(run_date=run_date, ticket=ticket, lookback=60)
     rmse = model_output.load_rmse()
-    print(rmse)
     output, true_price = model_output.recursive_forecasting()
-    print(output)
-    print(true_price)
 
+    print('INFO - Writing result')
     postgres_operator(
         query=f"""
-            delete from predict_result where date = '{run_date}';
+            delete from predict_result where date = '{run_date}' and stock = '{ticket};
             insert into predict_result values ('{run_date}', '{ticket}', {true_price}, {output[-5]}, {output[-3]}, {output[-1]}, {rmse});
         """, conn=connect()
     )
